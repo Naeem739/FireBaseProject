@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase authentication
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'home.dart'; // Import your home page if it exists
 
 class RegistrationPage extends StatelessWidget {
@@ -7,8 +8,10 @@ class RegistrationPage extends StatelessWidget {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _mobileController = TextEditingController();
+  final _imageUrlController = TextEditingController(); // Controller for image URL
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
 
   void _register(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
@@ -20,6 +23,14 @@ class RegistrationPage extends StatelessWidget {
         );
 
         if (userCredential.user != null) {
+          // Save user data to Firestore
+          await _firestore.collection('users_profile').doc(userCredential.user!.uid).set({
+            'name': _nameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'phone': _mobileController.text.trim(),
+            'image': _imageUrlController.text.trim(),
+          });
+
           // Registration successful, navigate to home page
           Navigator.pushReplacement(
             context,
@@ -76,7 +87,9 @@ class RegistrationPage extends StatelessWidget {
                   fit: BoxFit.cover,
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(
+                height: 10,
+              ),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -137,6 +150,22 @@ class RegistrationPage extends StatelessWidget {
                   } else if (!isNumeric(value)) {
                     return 'Mobile number must only contain digits';
                   }
+                  return null;
+                },
+              ),
+              SizedBox(height: 10),
+              TextFormField(
+                controller: _imageUrlController,
+                decoration: InputDecoration(
+                  labelText: 'Image URL', // Label for image URL field
+                  prefixIcon: Icon(Icons.image, color: Colors.orange), // Icon for image URL field
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Enter image URL';
+                  }
+                  // You can add additional validation logic for URL format here if needed
                   return null;
                 },
               ),

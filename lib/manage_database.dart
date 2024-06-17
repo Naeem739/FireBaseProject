@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'manage_database_page.dart';
 
-class ManageDatabase extends StatefulWidget {
-  @override
-  _ManageDatabaseState createState() => _ManageDatabaseState();
-}
-
-class _ManageDatabaseState extends State<ManageDatabase> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController locationController = TextEditingController();
-  final TextEditingController priceController = TextEditingController();
-  final TextEditingController imageController = TextEditingController();
-  final TextEditingController typeController = TextEditingController();
+class ManageDatabase extends StatelessWidget {
+  final List<Map<String, dynamic>> sections = [
+    {
+      'title': 'Insert Rooms', // Renamed from 'Featured Room'
+      'collection': 'rooms', // Updated collection name
+      'fields': ['name', 'location','price', 'description', 'image','status'],
+      'color': Colors.blueAccent,
+    },
+    {
+      'title': 'User List',
+      'collection': 'users_profile',
+      'fields': ['name', 'email', 'phone', 'image'],
+      'color': Color.fromARGB(255, 167, 20, 212),
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -21,63 +25,50 @@ class _ManageDatabaseState extends State<ManageDatabase> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: nameController,
-              decoration: InputDecoration(labelText: 'Name'),
-            ),
-            TextFormField(
-              controller: locationController,
-              decoration: InputDecoration(labelText: 'Location'),
-            ),
-            TextFormField(
-              controller: priceController,
-              decoration: InputDecoration(labelText: 'Price'),
-              keyboardType: TextInputType.number,
-            ),
-            TextFormField(
-              controller: imageController,
-              decoration: InputDecoration(labelText: 'Image URL'),
-            ),
-            TextFormField(
-              controller: typeController,
-              decoration: InputDecoration(labelText: 'Type'),
-            ),
-            SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: () {
-                // Example: Add a room to Firestore
-                FirebaseFirestore.instance.collection('rooms').add({
-                  'name': nameController.text,
-                  'location': locationController.text,
-                  'price': int.tryParse(priceController.text) ?? 0,
-                  'image': imageController.text,
-                  'type': typeController.text,
-                }).then((value) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Room added successfully'),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: sections.length,
+          itemBuilder: (context, index) {
+            var section = sections[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ManageDatabasePage(
+                        title: section['title'],
+                        collection: section['collection'],
+                        fields: section['fields'],
+                      ),
                     ),
                   );
-                  // Clear the text fields after successful submission
-                  nameController.clear();
-                  locationController.clear();
-                  priceController.clear();
-                  imageController.clear();
-                  typeController.clear();
-                }).catchError((error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to add room: $error'),
+                },
+                child: Card(
+                  color: section['color'],
+                  child: Container(
+                    width: 200,
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          section['title'],
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                  );
-                });
-              },
-              child: Text('Add Room to Database'),
-            ),
-          ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'details_room_page.dart'; // Import the details page
+import 'profile_page.dart'; // Import the profile page
+import 'explore.dart'; // Import the explore page
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -9,23 +12,56 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String selectedLocation = 'All';
+  int _selectedIndex = 0; // Current index for the bottom navigation bar
 
   final List<String> locations = [
     'All',
     'Cox\'s Bazar',
     'Kuakata',
     'Barishal',
-    'Pirojpur',
+    'Khulna',
     'Dhaka',
     'Chittagong',
     'Sylhet'
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      switch (index) {
+        case 1:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ExplorePage()),
+          );
+          break;
+        case 2:
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          );
+          break;
+      }
+    });
+  }
+
+  void _handleLogout() {
+ 
+  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
+  
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('StyFinder'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _handleLogout,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -71,8 +107,15 @@ class _HomePageState extends State<HomePage> {
               height: 250,
               child: StreamBuilder(
                 stream: selectedLocation == 'All'
-                    ? FirebaseFirestore.instance.collection('rooms').snapshots()
-                    : FirebaseFirestore.instance.collection('rooms').where('location', isEqualTo: selectedLocation).snapshots(),
+                    ? FirebaseFirestore.instance.collection('rooms')
+                        .where('status', isEqualTo: false)
+                        .limit(4) // Limit to top 5 rooms
+                        .snapshots()
+                    : FirebaseFirestore.instance.collection('rooms')
+                        .where('location', isEqualTo: selectedLocation)
+                        .where('status', isEqualTo: false)
+                        .limit(4) // Limit to top 5 rooms
+                        .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -111,13 +154,18 @@ class _HomePageState extends State<HomePage> {
             ),
             SizedBox(height: 20),
             // Recommended rooms list
-            Text('Recommended Rooms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Available Rooms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Container(
               height: 250,
               child: StreamBuilder(
                 stream: selectedLocation == 'All'
-                    ? FirebaseFirestore.instance.collection('rooms2').snapshots()
-                    : FirebaseFirestore.instance.collection('rooms2').where('location', isEqualTo: selectedLocation).snapshots(),
+                    ? FirebaseFirestore.instance.collection('rooms')
+                        .where('status', isEqualTo: false)
+                        .snapshots()
+                    : FirebaseFirestore.instance.collection('rooms')
+                        .where('location', isEqualTo: selectedLocation)
+                        .where('status', isEqualTo: false)
+                        .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -139,7 +187,7 @@ class _HomePageState extends State<HomePage> {
                             MaterialPageRoute(
                               builder: (context) => DetailsRoomPage(
                                 roomId: room.id,
-                                collectionName: 'rooms2',
+                                collectionName: 'rooms',
                               ),
                             ),
                           );
@@ -156,6 +204,25 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
       ),
     );
   }
@@ -221,7 +288,7 @@ class RoomCard extends StatelessWidget {
                   top: 10,
                   right: 10,
                   child: Text(
-                    '\$${room['price']}',
+                    'BDT ${room['price']}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,

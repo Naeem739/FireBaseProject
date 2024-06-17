@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:room/login_page.dart';
 import 'package:room/register_page.dart';
 import 'package:room/home.dart';
+import 'package:room/manage_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +33,9 @@ class MyApp extends StatelessWidget {
       routes: {
         '/register': (context) => RegistrationPage(),
         '/login': (context) => LoginPage(),
-        '/home': (context) => HomePage(), // Add the route for HomePage
-        // Add more routes as needed
+        '/home': (context) => HomePage(),
+        '/manageDatabase': (context) => ManageDatabase(),
+        
       },
     );
   }

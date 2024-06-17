@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart'; // Import your home page if it exists
 import 'manage_database.dart'; // Import ManageDatabase if it exists
 
@@ -13,6 +14,38 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _rememberMe = false; // To remember the login
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberMe(); // Load remember me preference on startup
+  }
+
+  // Load remember me preference from local storage
+  void _loadRememberMe() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _rememberMe = prefs.getBool('rememberMe') ?? false;
+      if (_rememberMe) {
+        _emailController.text = prefs.getString('email') ?? '';
+        _passwordController.text = prefs.getString('password') ?? '';
+      }
+    });
+  }
+
+  // Save remember me preference to local storage
+  void _saveRememberMe() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('rememberMe', _rememberMe);
+    if (_rememberMe) {
+      await prefs.setString('email', _emailController.text.trim());
+      await prefs.setString('password', _passwordController.text.trim());
+    } else {
+      await prefs.remove('email');
+      await prefs.remove('password');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +69,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               SizedBox(height: 30),
-            
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -70,17 +102,42 @@ class _LoginPageState extends State<LoginPage> {
                 },
               ),
               SizedBox(height: 20),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value!;
+                      });
+                    },
+                  ),
+                  Text('Remember Me'),
+                ],
+              ),
+              SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  _resetPassword(context);
+                },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(color: Colors.blue),
+                ),
+              ),
+              SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   _signInWithEmailAndPassword(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  ///primary: Colors.teal,
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                 backgroundColor: Colors.teal, // Background color
+                 // onPrimary: Colors.white, // Text color
+                  minimumSize: Size(double.infinity, 60), // Full width and 40px height
                 ),
                 child: Text(
                   'Login',
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: 18,color: Colors.white),
                 ),
               ),
             ],
@@ -99,6 +156,9 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (userCredential.user != null) {
+          // Save remember me preference
+          _saveRememberMe();
+
           // Check if the user is admin
           if (_emailController.text.trim() == 'admin@gmail.com' &&
               _passwordController.text.trim() == 'admin123') {
@@ -165,6 +225,69 @@ class _LoginPageState extends State<LoginPage> {
           },
         );
       }
+    }
+  }
+
+  void _resetPassword(BuildContext context) async {
+    if (_emailController.text.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Reset Password Error'),
+            content: Text('Please enter your email to reset your password.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    try {
+      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Reset Password'),
+            content: Text('Password reset email has been sent to ${_emailController.text.trim()}.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      print('Failed to send password reset email: $e');
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Reset Password Error'),
+            content: Text('Failed to send password reset email. Please try again later.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 }

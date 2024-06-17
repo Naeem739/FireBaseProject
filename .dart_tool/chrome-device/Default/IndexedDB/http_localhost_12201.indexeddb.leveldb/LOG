@@ -1,0 +1,4 @@
+2024/06/15-07:38:58.467 4dc0 Reusing MANIFEST C:\Users\Naeem\AppData\Local\Temp\flutter_tools.92007e82\flutter_tools_chrome_device.9083a1b9\Default\IndexedDB\http_localhost_12201.indexeddb.leveldb/MANIFEST-000001
+2024/06/15-07:38:58.468 4dc0 Recovering log #10
+2024/06/15-07:38:58.469 4dc0 Level-0 table #14: started
+2024/06/15-07:38:58.470 4dc0 Level-0 table #14: 0 bytes IO error: C:\Users\Naeem\AppData\Local\Temp\flutter_tools.92007e82\flutter_tools_chrome_device.9083a1b9\Default\IndexedDB\http_localhost_12201.indexeddb.leveldb/000014.ldb: FILE_ERROR_NO_SPACE (ChromeMethodBFE: 3::WritableFileAppend::8)
