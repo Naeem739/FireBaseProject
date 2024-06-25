@@ -18,10 +18,19 @@ class _HomePageState extends State<HomePage> {
     'All',
     'Cox\'s Bazar',
     'Kuakata',
-    'Barishal',
-    'Khulna',
+    'Sundarbans Mangrove Forest',
+    'Saint Martins',
+    'Paharpur',
     'Dhaka',
+    'Barishal',
+    'Bandarban',
+    'Jaflong',
+    'Bangladesh National Zoo',
+    'Natore Rajbari',
+    'Kantanagar Temple',
+    'Puthia Rajbari',
     'Chittagong',
+    'Rangamati',
     'Sylhet'
   ];
 
@@ -46,9 +55,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleLogout() {
- 
-  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
-  
+    Navigator.pushAndRemoveUntil(context,
+        MaterialPageRoute(builder: (context) => LoginPage()), (route) => false);
   }
 
   @override
@@ -80,17 +88,22 @@ class _HomePageState extends State<HomePage> {
                       });
                     },
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       margin: EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: selectedLocation == location ? Colors.blue : Colors.grey[200],
+                        color: selectedLocation == location
+                            ? Colors.blue
+                            : Colors.grey[200],
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Center(
                         child: Text(
                           location,
                           style: TextStyle(
-                            color: selectedLocation == location ? Colors.white : Colors.black,
+                            color: selectedLocation == location
+                                ? Colors.white
+                                : Colors.black,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -102,19 +115,22 @@ class _HomePageState extends State<HomePage> {
             ),
             SizedBox(height: 10),
             // Featured rooms list
-            Text('Featured Rooms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Featured Rooms',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Container(
               height: 250,
               child: StreamBuilder(
                 stream: selectedLocation == 'All'
-                    ? FirebaseFirestore.instance.collection('rooms')
+                    ? FirebaseFirestore.instance
+                        .collection('rooms')
                         .where('status', isEqualTo: false)
-                        .limit(4) // Limit to top 5 rooms
+                        .limit(4)
                         .snapshots()
-                    : FirebaseFirestore.instance.collection('rooms')
+                    : FirebaseFirestore.instance
+                        .collection('rooms')
                         .where('location', isEqualTo: selectedLocation)
                         .where('status', isEqualTo: false)
-                        .limit(4) // Limit to top 5 rooms
+                        .limit(4)
                         .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -154,15 +170,18 @@ class _HomePageState extends State<HomePage> {
             ),
             SizedBox(height: 20),
             // Recommended rooms list
-            Text('Available Rooms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Available Rooms',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Container(
               height: 250,
               child: StreamBuilder(
                 stream: selectedLocation == 'All'
-                    ? FirebaseFirestore.instance.collection('rooms')
+                    ? FirebaseFirestore.instance
+                        .collection('rooms')
                         .where('status', isEqualTo: false)
                         .snapshots()
-                    : FirebaseFirestore.instance.collection('rooms')
+                    : FirebaseFirestore.instance
+                        .collection('rooms')
                         .where('location', isEqualTo: selectedLocation)
                         .where('status', isEqualTo: false)
                         .snapshots(),
@@ -233,8 +252,29 @@ class RoomCard extends StatelessWidget {
 
   RoomCard({required this.room});
 
+  Stream<double> _streamAverageRating(String roomId) {
+    return FirebaseFirestore.instance
+        .collection('reviews')
+        .where('room_id', isEqualTo: roomId)
+        .snapshots()
+        .map((snapshot) {
+      double totalRating = 0;
+      int numberOfRatings = snapshot.docs.length;
+
+      for (var doc in snapshot.docs) {
+        totalRating += doc['rating'];
+      }
+
+      return numberOfRatings > 0 ? totalRating / numberOfRatings : 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<String> images = List<String>.from(room['images'] ?? []);
+    String imageUrl =
+        images.isNotEmpty ? images[0] : 'https://via.placeholder.com/150';
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -252,7 +292,7 @@ class RoomCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10.0),
                   child: Image.network(
-                    room['image'],
+                    imageUrl,
                     height: 150,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -262,25 +302,51 @@ class RoomCard extends StatelessWidget {
                   top: 10,
                   left: 10,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(5.0),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '4.5',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ],
+                    child: StreamBuilder<double>(
+                      stream: _streamAverageRating(room.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        }
+                        if (snapshot.hasError) {
+                          print('Error fetching rating: ${snapshot.error}');
+                          return Text(
+                            'N/A',
+                            style: TextStyle(color: Colors.white),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data == null) {
+                          print('No rating data available');
+                          return Text(
+                            'N/A',
+                            style: TextStyle(color: Colors.white),
+                          );
+                        }
+
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              snapshot.data!.toStringAsFixed(1),
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),

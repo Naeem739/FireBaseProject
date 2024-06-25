@@ -65,6 +65,9 @@ class _ExplorePageState extends State<ExplorePage> {
 
                 return ListView(
                   children: snapshot.data!.docs.map((room) {
+                    List<String> images = List<String>.from(room['images'] ?? []);
+                    String imageUrl = images.isNotEmpty ? images[0] : ''; // Use the first image as the list tile image
+
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -82,9 +85,9 @@ class _ExplorePageState extends State<ExplorePage> {
                         title: Text(room['name']),
                         subtitle: Text(room['location']),
                         leading: CircleAvatar(
-                          backgroundImage: NetworkImage(room['image']),
+                          backgroundImage: NetworkImage(imageUrl),
                         ),
-                        trailing: Text('\$${room['price']}'),
+                        trailing: Text('BDT ${room['price']}'), // Display price directly in BDT
                       ),
                     );
                   }).toList(),

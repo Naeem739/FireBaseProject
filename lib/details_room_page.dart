@@ -1,12 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'booking_page.dart';
+import 'review_page.dart';
 
-class DetailsRoomPage extends StatelessWidget {
+class DetailsRoomPage extends StatefulWidget {
   final String roomId;
   final String collectionName;
 
   DetailsRoomPage({required this.roomId, required this.collectionName});
+
+  @override
+  _DetailsRoomPageState createState() => _DetailsRoomPageState();
+}
+
+class _DetailsRoomPageState extends State<DetailsRoomPage> {
+  double averageRating = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateAverageRating();
+  }
+
+  Future<void> _calculateAverageRating() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('room_id', isEqualTo: widget.roomId)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        double totalRating = 0.0;
+        int numberOfReviews = snapshot.docs.length;
+
+        snapshot.docs.forEach((doc) {
+          totalRating += doc['rating'];
+        });
+
+        setState(() {
+          averageRating = totalRating / numberOfReviews;
+        });
+      } else {
+        setState(() {
+          averageRating = 0.0;
+        });
+      }
+    } catch (error) {
+      print('Error calculating average rating: $error');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +59,8 @@ class DetailsRoomPage extends StatelessWidget {
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
-            .collection(collectionName)
-            .doc(roomId)
+            .collection(widget.collectionName)
+            .doc(widget.roomId)
             .get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -31,19 +74,28 @@ class DetailsRoomPage extends StatelessWidget {
           }
 
           var roomData = snapshot.data!.data() as Map<String, dynamic>;
+          var imageList = List<String>.from(roomData['images'] ?? []);
 
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Room Image with rounded corners
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10.0),
-                  child: Image.network(
-                    roomData['image'],
-                    height: 300,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                // Room Images Carousel
+                SizedBox(
+                  height: 300,
+                  child: PageView.builder(
+                    itemCount: imageList.length,
+                    itemBuilder: (context, index) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(10.0),
+                        child: Image.network(
+                          imageList[index],
+                          height: 300,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 SizedBox(height: 16),
@@ -67,7 +119,7 @@ class DetailsRoomPage extends StatelessWidget {
                         style: TextStyle(fontSize: 18, color: Colors.grey),
                       ),
                       Text(
-                        'BDT ${roomData['price'].toStringAsFixed(2)}', // Change here
+                        'BDT ${roomData['price'].toStringAsFixed(2)}',
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
@@ -83,24 +135,52 @@ class DetailsRoomPage extends StatelessWidget {
                     subtitle: Row(
                       children: List.generate(5, (index) {
                         return Icon(Icons.star,
-                            color: index < 4 ? Colors.amber : Colors.grey);
+                            color: index < averageRating ? Colors.amber : Colors.grey);
                       }),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(4, (index) {
-                        return CircleAvatar(
-                          backgroundImage: AssetImage(
-                              'assets/user${index + 1}.jpg'), // Replace with your actual user images
-                          radius: 15,
+                    trailing: FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('reviews')
+                          .where('room_id', isEqualTo: widget.roomId)
+                          .get(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return SizedBox();
+                        }
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(
+                            4,
+                            (index) {
+                              if (index < snapshot.data!.docs.length) {
+                                return CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                    snapshot.data!.docs[index]
+                                        ['user_profile_image'],
+                                  ),
+                                  radius: 15,
+                                );
+                              } else {
+                                return CircleAvatar(
+                                  backgroundImage:
+                                      AssetImage('assets/user_placeholder.jpg'),
+                                  radius: 15,
+                                );
+                              }
+                            },
+                          ),
                         );
-                      }),
+                      },
                     ),
                     onTap: () {
-                      // Handle navigation to detailed reviews page
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ReviewsPage()),
+                        MaterialPageRoute(
+                            builder: (context) => ReviewsPage(roomId: widget.roomId)),
                       );
                     },
                   ),
@@ -163,13 +243,12 @@ class DetailsRoomPage extends StatelessWidget {
           children: [
             ElevatedButton.icon(
               onPressed: () {
-                // Handle Call action
+                _makePhoneCall('tel:+8801623094662');
               },
               icon: Icon(Icons.call),
               label: Text('Call Now'),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                //primary: Colors.green, // Change button color here
               ),
             ),
             ElevatedButton.icon(
@@ -177,7 +256,7 @@ class DetailsRoomPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BookingPage(roomId: roomId),
+                    builder: (context) => BookingPage(roomId: widget.roomId),
                   ),
                 );
               },
@@ -185,13 +264,20 @@ class DetailsRoomPage extends StatelessWidget {
               label: Text('Book Now'),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                //primary: Colors.blue, // Change button color here
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _makePhoneCall(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
   }
 
   Widget _buildOfferIcon(IconData icon, String label) {
@@ -214,28 +300,12 @@ class DetailsRoomPage extends StatelessWidget {
   }
 }
 
-class ReviewsPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Replace this with the actual reviews and ratings page
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Reviews and Ratings'),
-      ),
-      body: Center(
-        child: Text('All reviews and ratings go here'),
-      ),
-    );
-  }
-}
-
 void main() {
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
     home: DetailsRoomPage(
       roomId: 'abc123', // Replace with actual room ID from your Firestore
-      collectionName:
-          'rooms', // Replace with actual collection name from your Firestore
+      collectionName: 'rooms', // Replace with actual collection name from your Firestore
     ),
   ));
 }

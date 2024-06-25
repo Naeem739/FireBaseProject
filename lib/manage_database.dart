@@ -4,9 +4,9 @@ import 'manage_database_page.dart';
 class ManageDatabase extends StatelessWidget {
   final List<Map<String, dynamic>> sections = [
     {
-      'title': 'Insert Rooms', // Renamed from 'Featured Room'
-      'collection': 'rooms', // Updated collection name
-      'fields': ['name', 'location','price', 'description', 'image','status'],
+      'title': 'Insert Rooms',
+      'collection': 'rooms',
+      'fields': ['name', 'location', 'price', 'description', 'images', 'status'],
       'color': Colors.blueAccent,
     },
     {
@@ -14,6 +14,18 @@ class ManageDatabase extends StatelessWidget {
       'collection': 'users_profile',
       'fields': ['name', 'email', 'phone', 'image'],
       'color': Color.fromARGB(255, 167, 20, 212),
+    },
+    {
+      'title': 'Room Booking',
+      'collection': 'room_booking',
+      'fields': ['start_date', 'end_date', 'transaction_id', 'user_email'],
+      'color': Colors.green,
+    },
+    {
+      'title': 'Reviews',
+      'collection': 'reviews',
+      'fields': ['room_id', 'review_text', 'user_email', 'rating'],
+      'color': Colors.orange,
     },
   ];
 
@@ -41,6 +53,7 @@ class ManageDatabase extends StatelessWidget {
                         title: section['title'],
                         collection: section['collection'],
                         fields: section['fields'],
+                        defaultValues: section['collection'] == 'rooms' ? {'status': false} : null,
                       ),
                     ),
                   );

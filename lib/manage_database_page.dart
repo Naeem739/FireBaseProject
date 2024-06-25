@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // Import package for date formatting
 
 class ManageDatabasePage extends StatefulWidget {
   final String title;
   final String collection;
   final List<String> fields;
+  final Map<String, dynamic>? defaultValues; // New variable for default values
 
   ManageDatabasePage({
     required this.title,
     required this.collection,
     required this.fields,
+    this.defaultValues,
   });
 
   @override
@@ -18,20 +21,27 @@ class ManageDatabasePage extends StatefulWidget {
 
 class _ManageDatabasePageState extends State<ManageDatabasePage> {
   final Map<String, TextEditingController> controllers = {};
+  final List<TextEditingController> imageControllers = [TextEditingController()]; // Initialize with one controller
+  bool status = false; // New variable to hold status field value
 
   @override
   void initState() {
     super.initState();
     for (String field in widget.fields) {
       controllers[field] = TextEditingController();
+      if (field == 'status' && widget.defaultValues != null && widget.defaultValues!.containsKey('status')) {
+        status = widget.defaultValues!['status'];
+        controllers[field]!.text = status.toString();
+      }
     }
-    // Initialize controller for Status field
-    controllers['status'] = TextEditingController();
   }
 
   @override
   void dispose() {
     for (var controller in controllers.values) {
+      controller.dispose();
+    }
+    for (var controller in imageControllers) {
       controller.dispose();
     }
     super.dispose();
@@ -40,81 +50,139 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
   void _showDialog({DocumentSnapshot? doc, required bool isEditing}) {
     if (isEditing && doc != null) {
       for (String field in widget.fields) {
-        controllers[field]!.text = doc[field].toString();
+        if (field == 'status') {
+          status = doc['status'];
+          controllers[field]!.text = status.toString();
+        } else if (field == 'images') {
+          imageControllers.clear();
+          List<String> images = List<String>.from(doc['images'] ?? []);
+          for (var url in images) {
+            imageControllers.add(TextEditingController(text: url));
+          }
+        } else {
+          controllers[field]!.text = doc[field].toString();
+        }
       }
-      controllers['status']!.text = doc['status'].toString();
     } else {
       controllers.forEach((key, controller) {
-        controller.clear();
+        if (key == 'status') {
+          status = false; // Default to false if adding new entry
+          controller.text = status.toString();
+        } else {
+          controller.clear();
+        }
       });
+      imageControllers.clear();
+      imageControllers.add(TextEditingController()); // Ensure one image URL field is always present
     }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('${isEditing ? 'Edit' : 'Add'} ${widget.title}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...widget.fields.map((field) {
-                  return TextFormField(
-                    controller: controllers[field],
-                    decoration: InputDecoration(labelText: field.capitalize()),
-                    keyboardType: field == 'price' || field == 'phone'
-                        ? TextInputType.number
-                        : TextInputType.text,
-                  );
-                }).toList(),
-                // Add TextFormField for Status field
-                
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Map<String, dynamic> data = {};
-                widget.fields.forEach((field) {
-                  if (field == 'price' || field == 'phone') {
-                    data[field] = int.tryParse(controllers[field]!.text) ?? 0;
-                  } else {
-                    data[field] = controllers[field]!.text;
-                  }
-                });
-                // Add Status field to data map
-                data['status'] = controllers['status']!.text == 'true';
-
-                if (isEditing && doc != null) {
-                  FirebaseFirestore.instance
-                      .collection(widget.collection)
-                      .doc(doc.id)
-                      .update(data)
-                      .then((_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('${isEditing ? 'Edit' : 'Add'} ${widget.title}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...widget.fields.map((field) {
+                      if (field == 'images') {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Images'),
+                            ...imageControllers.map((controller) {
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: controller,
+                                      decoration: InputDecoration(labelText: 'Image URL'),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete),
+                                    onPressed: () {
+                                      setState(() {
+                                        imageControllers.remove(controller);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              onPressed: () {
+                                setState(() {
+                                  imageControllers.add(TextEditingController());
+                                });
+                              },
+                            ),
+                          ],
+                        );
+                      } else {
+                        return TextFormField(
+                          controller: controllers[field],
+                          decoration: InputDecoration(labelText: field.capitalize()),
+                          keyboardType: field == 'price' || field == 'phone'
+                              ? TextInputType.number
+                              : TextInputType.text,
+                        );
+                      }
+                    }).toList(),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
                     Navigator.pop(context);
-                  });
-                } else {
-                  FirebaseFirestore.instance.collection(widget.collection).add(data).then((docRef) {
-                    // Update the document with the room_id
-                    FirebaseFirestore.instance
-                        .collection(widget.collection)
-                        .doc(docRef.id)
-                        .update({'room_id': docRef.id}).then((_) {
-                      Navigator.pop(context);
+                  },
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Map<String, dynamic> data = {};
+                    widget.fields.forEach((field) {
+                      if (field == 'price' || field == 'phone') {
+                        data[field] = int.tryParse(controllers[field]!.text) ?? 0;
+                      } else if (field == 'status') {
+                        data[field] = controllers[field]!.text == 'true'; // Convert string to bool
+                      } else if (field == 'images') {
+                        data[field] = imageControllers.map((controller) => controller.text).toList();
+                      } else {
+                        data[field] = controllers[field]!.text;
+                      }
                     });
-                  });
-                }
-              },
-              child: Text('Save'),
-            ),
-          ],
+
+                    if (isEditing && doc != null) {
+                      FirebaseFirestore.instance
+                          .collection(widget.collection)
+                          .doc(doc.id)
+                          .update(data)
+                          .then((_) {
+                        Navigator.pop(context);
+                      });
+                    } else {
+                      FirebaseFirestore.instance.collection(widget.collection).add(data).then((docRef) {
+                        // Update the document with the room_id
+                        FirebaseFirestore.instance
+                            .collection(widget.collection)
+                            .doc(docRef.id)
+                            .update({'room_id': docRef.id}).then((_) {
+                          Navigator.pop(context);
+                        });
+                      });
+                    }
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -128,11 +196,11 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection(widget.collection).snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
@@ -144,14 +212,38 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: [
-                        DataColumn(label: Text('Room ID')),
+                        DataColumn(label: Text('ID')),
                         ...widget.fields.map((field) => DataColumn(label: Text(field.capitalize()))),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: documents.map((doc) {
                         return DataRow(cells: [
-                          DataCell(Text(doc.id)), // Display room_id
-                          ...widget.fields.map((field) => DataCell(Text(doc[field]?.toString() ?? ''))).toList(),
+                          DataCell(Text(doc.id)),
+                          ...widget.fields.map((field) {
+                            if (field == 'start_date' || field == 'end_date') {
+                              // Format dates
+                              DateTime? date = doc[field]?.toDate();
+                              String formattedDate = DateFormat('dd/MM/yyyy').format(date!);
+                              return DataCell(Text(formattedDate));
+                            } else if (field == 'status') {
+                              return DataCell(Text(doc[field] ? 'true' : 'false'));
+                            } else if (field == 'images') {
+                              return DataCell(SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: List.generate(
+                                    (doc[field] as List).length,
+                                    (index) => Padding(
+                                      padding: EdgeInsets.only(right: 8.0),
+                                      child: Text(doc[field][index] ?? ''),
+                                    ),
+                                  ),
+                                ),
+                              ));
+                            } else {
+                              return DataCell(Text(doc[field]?.toString() ?? ''));
+                            }
+                          }).toList(),
                           DataCell(Row(
                             children: [
                               IconButton(
@@ -174,8 +266,8 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
