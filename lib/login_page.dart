@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart'; // Import your home page if it exists
 import 'manage_database.dart'; // Import ManageDatabase if it exists
-import 'Register_page.dart'; // Import RegisterPage
+import 'register_page.dart'; // Import RegisterPage
 
 class LoginPage extends StatefulWidget {
   @override
