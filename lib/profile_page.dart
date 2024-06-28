@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'booking_list_page.dart';
+import 'cart.dart'; // Import the Cart page
 
 class ProfilePage extends StatelessWidget {
   @override
@@ -81,6 +82,22 @@ class ProfilePage extends StatelessWidget {
                       label: 'My Booking',
                       value: 'View your bookings',
                       icon: Icons.book_online,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CartPage(),
+                        ),
+                      );
+                    },
+                    child: ProfileCard(
+                      label: 'My Cart',
+                      value: 'View your cart items',
+                      icon: Icons.shopping_cart,
                     ),
                   ),
                 ],

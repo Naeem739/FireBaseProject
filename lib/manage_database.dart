@@ -18,7 +18,7 @@ class ManageDatabase extends StatelessWidget {
     {
       'title': 'Room Booking',
       'collection': 'room_booking',
-      'fields': ['start_date', 'end_date', 'transaction_id', 'user_email'],
+      'fields': ['start_date', 'end_date', 'transaction_id', 'user_email', 'room_id'],
       'color': Colors.green,
     },
     {

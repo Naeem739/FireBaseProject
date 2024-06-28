@@ -81,7 +81,7 @@ class RegistrationPage extends StatelessWidget {
             children: [
                Container(
                 width: double.infinity,
-                height: 200,
+                height: 180,
                 child: Image.asset(
                   'assets/car.PNG', // Make sure you have this image in your assets folder
                   fit: BoxFit.cover,

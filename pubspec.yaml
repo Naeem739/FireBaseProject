@@ -20,6 +20,8 @@ dependencies:
   intl: ^0.17.0
   shared_preferences: ^2.0.10
   url_launcher: ^6.0.20
+  google_maps_flutter: ^2.0.6
+  geolocator: ^7.6.2
  
 
 

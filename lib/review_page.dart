@@ -21,6 +21,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
   double _rating = 0;
 
   int _selectedIndex = 0; // Current selected tab index
+  bool _hasBooking = false; // Store if the user has a booking
 
   @override
   void initState() {
@@ -33,6 +34,23 @@ class _ReviewsPageState extends State<ReviewsPage> {
     User? user = FirebaseAuth.instance.currentUser;
     setState(() {
       _userEmail = user?.email;
+      if (_userEmail != null) {
+        _checkUserBooking();
+      }
+    });
+  }
+
+  void _checkUserBooking() async {
+    // Check if the user has a booking for the room
+    var bookingSnapshot = await FirebaseFirestore.instance
+        .collection('room_booking')
+        .where('user_email', isEqualTo: _userEmail)
+        .where('room_id', isEqualTo: widget.roomId)
+        .limit(1)
+        .get();
+
+    setState(() {
+      _hasBooking = bookingSnapshot.docs.isNotEmpty;
     });
   }
 
@@ -50,7 +68,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
 
       // Retrieve user profile information based on email
       var userProfileSnapshot = await FirebaseFirestore.instance
-          .collection('user_profile')
+          .collection('users_profile')
           .where('email', isEqualTo: _userEmail)
           .limit(1)
           .get();
@@ -72,8 +90,6 @@ class _ReviewsPageState extends State<ReviewsPage> {
         'user_image': userImage, // User image URL retrieved from user_profile
         'review_text': _reviewText,
         'rating': _rating,
-        'user_profile_image':
-            'https://via.placeholder.com/150', // Placeholder for user profile image URL
       });
 
       // Clear form fields
@@ -121,12 +137,13 @@ class _ReviewsPageState extends State<ReviewsPage> {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundImage:
-                                NetworkImage(review['user_profile_image']),
+                                NetworkImage(review['user_image']),
                           ),
                           title: Text(review['user_name']),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text(review['review_text']),
                               Row(
                                 children: List.generate(5, (starIndex) {
                                   return Icon(
@@ -137,7 +154,6 @@ class _ReviewsPageState extends State<ReviewsPage> {
                                   );
                                 }),
                               ),
-                              Text(review['review_text']),
                             ],
                           ),
                         ),
@@ -147,55 +163,60 @@ class _ReviewsPageState extends State<ReviewsPage> {
                 },
               ),
               Divider(),
-              Text(
-                'Submit a Review',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              if (_hasBooking)
+                Column(
                   children: [
                     Text(
-                      'Review as $_userEmail', // Displaying the user's email
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
+                      'Submit a Review',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: 10),
-                    TextFormField(
-                      decoration: InputDecoration(labelText: 'Review'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your review';
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {
-                        _reviewText = value;
-                      },
-                    ),
-                    SizedBox(height: 10),
-                    Text('Rating: $_rating', style: TextStyle(fontSize: 18)),
-                    Slider(
-                      value: _rating,
-                      onChanged: (newRating) {
-                        setState(() {
-                          _rating = newRating;
-                        });
-                      },
-                      divisions: 5,
-                      label: _rating.toString(),
-                      min: 0,
-                      max: 5,
-                    ),
-                    SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: _submitReview,
-                      child: Text('Submit Review'),
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Review as $_userEmail', // Displaying the user's email
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 10),
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Review'),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your review';
+                              }
+                              return null;
+                            },
+                            onSaved: (value) {
+                              _reviewText = value;
+                            },
+                          ),
+                          SizedBox(height: 10),
+                          Text('Rating: $_rating', style: TextStyle(fontSize: 18)),
+                          Slider(
+                            value: _rating,
+                            onChanged: (newRating) {
+                              setState(() {
+                                _rating = newRating;
+                              });
+                            },
+                            divisions: 5,
+                            label: _rating.toString(),
+                            min: 0,
+                            max: 5,
+                          ),
+                          SizedBox(height: 10),
+                          ElevatedButton(
+                            onPressed: _submitReview,
+                            child: Text('Submit Review'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
             ],
           ),
         ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,11 +17,66 @@ class DetailsRoomPage extends StatefulWidget {
 
 class _DetailsRoomPageState extends State<DetailsRoomPage> {
   double averageRating = 0.0;
+  Map<String, dynamic>? roomData;
+  bool isInCart = false;
+  late PageController _pageController;
+  int _currentPage = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
+    _fetchRoomDetails();
     _calculateAverageRating();
+    _checkIfInCart();
+    _startImageSlideshow();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startImageSlideshow() {
+    _timer = Timer.periodic(Duration(seconds: 5), (Timer timer) {
+      if (_currentPage < roomData!['images'].length - 1) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+      _pageController.animateToPage(
+        _currentPage,
+        duration: Duration(milliseconds: 350),
+        curve: Curves.easeIn,
+      );
+    });
+  }
+
+  Future<void> _fetchRoomDetails() async {
+    try {
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection(widget.collectionName)
+          .doc(widget.roomId)
+          .get();
+
+      if (snapshot.exists) {
+        setState(() {
+          roomData = snapshot.data() as Map<String, dynamic>;
+        });
+      } else {
+        setState(() {
+          roomData = null;
+        });
+      }
+    } catch (error) {
+      print('Error fetching room details: $error');
+      setState(() {
+        roomData = null;
+      });
+    }
   }
 
   Future<void> _calculateAverageRating() async {
@@ -51,192 +107,225 @@ class _DetailsRoomPageState extends State<DetailsRoomPage> {
     }
   }
 
+  Future<void> _checkIfInCart() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('cart')
+          .where('room_id', isEqualTo: widget.roomId)
+          .get();
+
+      setState(() {
+        isInCart = snapshot.docs.isNotEmpty;
+      });
+    } catch (error) {
+      print('Error checking cart: $error');
+    }
+  }
+
+  Future<void> _addToCart() async {
+    if (isInCart) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Already in Cart'),
+      ));
+    } else if (roomData != null) {
+      try {
+        await FirebaseFirestore.instance.collection('cart').add({
+          'room_id': widget.roomId,
+          'name': roomData!['name'],
+          'image': roomData!['images'][0],
+          'price': roomData!['price'],
+          'location': roomData!['location'],
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Room added to cart'),
+        ));
+        setState(() {
+          isInCart = true;
+        });
+      } catch (error) {
+        print('Error adding to cart: $error');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to add room to cart'),
+        ));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Insights'),
       ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection(widget.collectionName)
-            .doc(widget.roomId)
-            .get(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return Center(child: Text('Room not found'));
-          }
-
-          var roomData = snapshot.data!.data() as Map<String, dynamic>;
-          var imageList = List<String>.from(roomData['images'] ?? []);
-
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Room Images Carousel
-                SizedBox(
-                  height: 300,
-                  child: PageView.builder(
-                    itemCount: imageList.length,
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(10.0),
-                        child: Image.network(
-                          imageList[index],
-                          height: 300,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 16),
-                // Room name
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    roomData['name'],
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                SizedBox(height: 8),
-                // Location and Price section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Location: ${roomData['location']}',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      Text(
-                        'BDT ${roomData['price'].toStringAsFixed(2)}',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 16),
-                // Reviews and Ratings card
-                Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: ListTile(
-                    title: Text('Reviews and Ratings'),
-                    subtitle: Row(
-                      children: List.generate(5, (index) {
-                        return Icon(Icons.star,
-                            color: index < averageRating ? Colors.amber : Colors.grey);
-                      }),
-                    ),
-                    trailing: FutureBuilder<QuerySnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('reviews')
-                          .where('room_id', isEqualTo: widget.roomId)
-                          .get(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return CircularProgressIndicator();
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return SizedBox();
-                        }
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: List.generate(
-                            4,
-                            (index) {
-                              if (index < snapshot.data!.docs.length) {
-                                return CircleAvatar(
-                                  backgroundImage: NetworkImage(
-                                    snapshot.data!.docs[index]
-                                        ['user_profile_image'],
-                                  ),
-                                  radius: 15,
-                                );
-                              } else {
-                                return CircleAvatar(
-                                  backgroundImage:
-                                      AssetImage('assets/user_placeholder.jpg'),
-                                  radius: 15,
-                                );
-                              }
-                            },
+      body: roomData == null
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Room Images Carousel
+                  SizedBox(
+                    height: 300,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: roomData!['images'].length,
+                      itemBuilder: (context, index) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(10.0),
+                          child: Image.network(
+                            roomData!['images'][index],
+                            height: 300,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                           ),
                         );
                       },
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => ReviewsPage(roomId: widget.roomId)),
-                      );
-                    },
                   ),
-                ),
-                SizedBox(height: 16),
-                // What We Offer section (example amenities)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text('What We Offer',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: <Widget>[
-                            _buildOfferIcon(Icons.bed, 'Twin Bed'),
-                            _buildOfferIcon(Icons.local_parking, 'Parking'),
-                            _buildOfferIcon(Icons.wifi, 'WiFi'),
-                            _buildOfferIcon(Icons.pool, 'Pool'),
-                            _buildOfferIcon(Icons.fastfood, 'Snack'),
-                            _buildOfferIcon(Icons.free_breakfast, 'Breakfast'),
-                          ],
+                  SizedBox(height: 16),
+                  // Room name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      roomData!['name'],
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  // Location and Price section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Location: ${roomData!['location']}',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
                         ),
-                      ),
-                    ],
+                        Text(
+                          'BDT ${roomData!['price'].toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(height: 16),
-                // Description section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Description',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                  SizedBox(height: 16),
+                  // Reviews and Ratings card
+                  Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: ListTile(
+                      title: Text('Reviews and Ratings'),
+                      subtitle: Row(
+                        children: List.generate(5, (index) {
+                          return Icon(Icons.star,
+                              color: index < averageRating
+                                  ? Colors.amber
+                                  : Colors.grey);
+                        }),
                       ),
-                      SizedBox(height: 10),
-                      Text(
-                        roomData['description'],
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      trailing: FutureBuilder<QuerySnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('reviews')
+                            .where('room_id', isEqualTo: widget.roomId)
+                            .get(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return CircularProgressIndicator();
+                          }
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
+                            return SizedBox();
+                          }
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(
+                              4,
+                              (index) {
+                                if (index < snapshot.data!.docs.length) {
+                                  return CircleAvatar(
+                                    backgroundImage: NetworkImage(
+                                      snapshot.data!.docs[index]
+                                          ['user_profile_image'],
+                                    ),
+                                    radius: 15,
+                                  );
+                                } else {
+                                  return CircleAvatar(
+                                    backgroundImage: AssetImage(
+                                        'assets/user_placeholder.jpg'),
+                                    radius: 15,
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        },
                       ),
-                    ],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  ReviewsPage(roomId: widget.roomId)),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 16),
+                  // What We Offer section (example amenities)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('What We Offer',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: <Widget>[
+                              _buildOfferIcon(Icons.bed, 'Twin Bed'),
+                              _buildOfferIcon(
+                                  Icons.local_parking, 'Parking'),
+                              _buildOfferIcon(Icons.wifi, 'WiFi'),
+                              _buildOfferIcon(Icons.pool, 'Pool'),
+                              _buildOfferIcon(Icons.fastfood, 'Snack'),
+                              _buildOfferIcon(
+                                  Icons.free_breakfast, 'Breakfast'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  // Description section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Description',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          roomData!['description'],
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
       bottomNavigationBar: BottomAppBar(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -251,21 +340,54 @@ class _DetailsRoomPageState extends State<DetailsRoomPage> {
                 padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BookingPage(roomId: widget.roomId),
+            isInCart
+                ? ElevatedButton(
+                    onPressed: null,
+                    child: Text('Already in Cart'),
+                    style: ElevatedButton.styleFrom(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: roomData == null
+                        ? null
+                        : () {
+                            _addToCart();
+                          },
+                    icon: Icon(Icons.shopping_cart),
+                    label: Text('Add to Cart'),
+                    style: ElevatedButton.styleFrom(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    ),
                   ),
-                );
-              },
-              icon: Icon(Icons.book),
-              label: Text('Book Now'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-              ),
-            ),
+            roomData == null || roomData!['status'] == true
+                ? ElevatedButton(
+                    onPressed: null,
+                    child: Text('Already Booked'),
+                    style: ElevatedButton.styleFrom(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              BookingPage(roomId: widget.roomId),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.book),
+                    label: Text('Book Now'),
+                    style: ElevatedButton.styleFrom(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                    ),
+                  ),
           ],
         ),
       ),

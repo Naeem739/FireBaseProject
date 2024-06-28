@@ -24,6 +24,19 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
   final List<TextEditingController> imageControllers = [TextEditingController()]; // Initialize with one controller
   bool status = false; // New variable to hold status field value
 
+  // Function to update room status based on bookings
+  void updateRoomStatus(String roomId, bool isBooking) {
+    FirebaseFirestore.instance
+        .collection('rooms')
+        .doc(roomId)
+        .update({'status': isBooking})
+        .then((_) {
+      print('Room status updated successfully!');
+    }).catchError((error) {
+      print('Failed to update room status: $error');
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +47,29 @@ class _ManageDatabasePageState extends State<ManageDatabasePage> {
         controllers[field]!.text = status.toString();
       }
     }
+
+    // Set up a listener for changes in room bookings
+    FirebaseFirestore.instance
+        .collection('room_booking')
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      snapshot.docChanges.forEach((change) {
+        if (change.type == DocumentChangeType.added || change.type == DocumentChangeType.modified) {
+          String roomId = change.doc['room_id'];
+          bool isBooking = true; // Assume booking is in effect
+          DateTime now = DateTime.now();
+          DateTime endDate = (change.doc['end_date'] as Timestamp).toDate();
+          
+          // Check if current date is after end date
+          if (now.isAfter(endDate)) {
+            isBooking = false; // Booking has ended
+          }
+          
+          // Update room status based on booking state
+          updateRoomStatus(roomId, isBooking);
+        }
+      });
+    });
   }
 
   @override

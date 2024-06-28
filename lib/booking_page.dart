@@ -52,6 +52,8 @@ class _BookingPageState extends State<BookingPage> {
   Future<void> _submitBooking() async {
     if (_formKey.currentState!.validate()) {
       final userEmail = FirebaseAuth.instance.currentUser!.email;
+
+      // Prepare room booking data
       final roomBooking = {
         'room_id': widget.roomId,
         'user_email': userEmail,
@@ -60,21 +62,25 @@ class _BookingPageState extends State<BookingPage> {
         'transaction_id': _transactionIdController.text,
       };
 
+      // Add booking to 'room_booking' collection
       await FirebaseFirestore.instance.collection('room_booking').add(roomBooking);
 
-      final roomRef = FirebaseFirestore.instance.collection('rooms').doc(widget.roomId);
-
-      await roomRef.update({'status': true});
+      // Update room status to true immediately upon booking
+      await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': true});
 
       // Schedule to turn status back to false after the end date
-      Future.delayed(_endDate!.difference(DateTime.now()), () async {
-        await roomRef.update({'status': false});
-      });
+      if (_endDate != null) {
+        Duration delay = _endDate!.difference(DateTime.now());
+        Future.delayed(delay, () async {
+          await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': false});
+        });
+      }
 
+      // Show success message and navigate back to HomePage
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully Booked')));
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),  // Navigate to HomePage
+        MaterialPageRoute(builder: (context) => HomePage()),
       );
     }
   }
@@ -120,6 +126,10 @@ class _BookingPageState extends State<BookingPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please select an end date';
+                  }
+                  // Ensure end date is after start date
+                  if (_startDate != null && _endDate != null && _endDate!.isBefore(_startDate!)) {
+                    return 'End date must be after start date';
                   }
                   return null;
                 },

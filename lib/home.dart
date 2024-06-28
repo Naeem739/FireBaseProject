@@ -123,13 +123,11 @@ class _HomePageState extends State<HomePage> {
                 stream: selectedLocation == 'All'
                     ? FirebaseFirestore.instance
                         .collection('rooms')
-                        .where('status', isEqualTo: false)
-                        .limit(4)
+                        .limit(3)
                         .snapshots()
                     : FirebaseFirestore.instance
                         .collection('rooms')
                         .where('location', isEqualTo: selectedLocation)
-                        .where('status', isEqualTo: false)
                         .limit(4)
                         .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -178,12 +176,10 @@ class _HomePageState extends State<HomePage> {
                 stream: selectedLocation == 'All'
                     ? FirebaseFirestore.instance
                         .collection('rooms')
-                        .where('status', isEqualTo: false)
                         .snapshots()
                     : FirebaseFirestore.instance
                         .collection('rooms')
                         .where('location', isEqualTo: selectedLocation)
-                        .where('status', isEqualTo: false)
                         .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {

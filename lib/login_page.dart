@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart'; // Import your home page if it exists
 import 'manage_database.dart'; // Import ManageDatabase if it exists
+import 'Register_page.dart'; // Import RegisterPage
 
 class LoginPage extends StatefulWidget {
   @override
@@ -62,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               Container(
                 width: double.infinity,
-                height: 200,
+                height: 180,
                 child: Image.asset(
                   'assets/car.PNG', // Make sure you have this image in your assets folder
                   fit: BoxFit.cover,
@@ -131,13 +132,22 @@ class _LoginPageState extends State<LoginPage> {
                   _signInWithEmailAndPassword(context);
                 },
                 style: ElevatedButton.styleFrom(
-                 backgroundColor: Colors.teal, // Background color
-                 // onPrimary: Colors.white, // Text color
+                  backgroundColor: Colors.teal, // Background color
                   minimumSize: Size(double.infinity, 60), // Full width and 40px height
                 ),
                 child: Text(
                   'Login',
                   style: TextStyle(fontSize: 18,color: Colors.white),
+                ),
+              ),
+              SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => RegistrationPage ()));
+                },
+                child: Text(
+                  "Don't Have Account? Register",
+                  style: TextStyle(color: Colors.blue),
                 ),
               ),
             ],
