@@ -1,0 +1,26 @@
+2024/06/29-12:49:36.753 4ffc Creating DB C:\Users\Naeem\AppData\Local\Temp\flutter_tools.dd1e0c77\flutter_tools_chrome_device.58c013d9\Default\IndexedDB\http_localhost_11861.indexeddb.leveldb since it was missing.
+2024/06/29-12:49:36.758 4ffc Reusing MANIFEST C:\Users\Naeem\AppData\Local\Temp\flutter_tools.dd1e0c77\flutter_tools_chrome_device.58c013d9\Default\IndexedDB\http_localhost_11861.indexeddb.leveldb/MANIFEST-000001
+2024/06/29-12:49:36.768 4f00 Level-0 table #5: started
+2024/06/29-12:49:36.772 4f00 Level-0 table #5: 1282 bytes OK
+2024/06/29-12:49:36.774 4f00 Delete type=0 #3
+2024/06/29-12:49:36.774 4f00 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/06/29-12:50:10.952 4f00 Level-0 table #7: started
+2024/06/29-12:50:10.955 4f00 Level-0 table #7: 1871 bytes OK
+2024/06/29-12:50:10.957 4f00 Delete type=0 #4
+2024/06/29-12:50:10.958 3810 Manual compaction at level-0 from '\x00\x04\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x05\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/06/29-12:50:47.183 4ffc Compacting 1@1 + 1@2 files
+2024/06/29-12:50:47.190 4ffc Generated table #8@1: 39 keys, 1244 bytes
+2024/06/29-12:50:47.190 4ffc Compacted 1@1 + 1@2 files => 1244 bytes
+2024/06/29-12:50:47.192 4ffc compacted to: files[ 0 0 1 0 0 0 0 ]
+2024/06/29-12:50:47.193 4ffc Delete type=2 #5
+2024/06/29-12:50:47.194 4ffc Delete type=2 #7
+2024/06/29-12:52:04.108 3810 Level-0 table #10: started
+2024/06/29-12:52:04.112 3810 Level-0 table #10: 6085 bytes OK
+2024/06/29-12:52:04.114 3810 Delete type=0 #6
+2024/06/29-12:52:04.115 3810 Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/06/29-12:52:25.593 4ffc Compacting 1@1 + 1@2 files
+2024/06/29-12:52:25.604 4ffc Generated table #11@1: 40 keys, 2836 bytes
+2024/06/29-12:52:25.604 4ffc Compacted 1@1 + 1@2 files => 2836 bytes
+2024/06/29-12:52:25.606 4ffc compacted to: files[ 0 0 1 0 0 0 0 ]
+2024/06/29-12:52:25.606 4ffc Delete type=2 #8
+2024/06/29-12:52:25.607 4ffc Delete type=2 #10

@@ -51,37 +51,47 @@ class _BookingPageState extends State<BookingPage> {
 
   Future<void> _submitBooking() async {
     if (_formKey.currentState!.validate()) {
-      final userEmail = FirebaseAuth.instance.currentUser!.email;
+      try {
+        final userEmail = FirebaseAuth.instance.currentUser!.email;
+        print("User email: $userEmail");
 
-      // Prepare room booking data
-      final roomBooking = {
-        'room_id': widget.roomId,
-        'user_email': userEmail,
-        'start_date': _startDate,
-        'end_date': _endDate,
-        'transaction_id': _transactionIdController.text,
-      };
+        // Prepare room booking data
+        final roomBooking = {
+          'room_id': widget.roomId,
+          'user_email': userEmail,
+          'start_date': _startDate,
+          'end_date': _endDate,
+          'transaction_id': _transactionIdController.text,
+        };
+        print("Room booking data: $roomBooking");
 
-      // Add booking to 'room_booking' collection
-      await FirebaseFirestore.instance.collection('room_booking').add(roomBooking);
+        // Add booking to 'room_booking' collection
+        await FirebaseFirestore.instance.collection('room_booking').add(roomBooking);
+        print("Booking added to 'room_booking' collection");
 
-      // Update room status to true immediately upon booking
-      await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': true});
+        // Update room status to true immediately upon booking
+        await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': true});
+        print("Room status updated to true");
 
-      // Schedule to turn status back to false after the end date
-      if (_endDate != null) {
-        Duration delay = _endDate!.difference(DateTime.now());
-        Future.delayed(delay, () async {
-          await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': false});
-        });
+        // Schedule to turn status back to false after the end date
+        if (_endDate != null) {
+          Duration delay = _endDate!.difference(DateTime.now());
+          Future.delayed(delay, () async {
+            await FirebaseFirestore.instance.collection('rooms').doc(widget.roomId).update({'status': false});
+            print("Room status updated to false after end date");
+          });
+        }
+
+        // Show success message and navigate back to HomePage
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully Booked')));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
+      } catch (e) {
+        print("Error during booking: $e");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to book the room')));
       }
-
-      // Show success message and navigate back to HomePage
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Successfully Booked')));
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),
-      );
     }
   }
 
