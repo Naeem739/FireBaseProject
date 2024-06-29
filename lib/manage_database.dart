@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'manage_database_page.dart';
+// Assuming you have a LoginPage widget in login_page.dart
+import 'login_page.dart';
 
 class ManageDatabase extends StatelessWidget {
   final List<Map<String, dynamic>> sections = [
     {
       'title': 'Insert Rooms',
       'collection': 'rooms',
-      'fields': ['name', 'location', 'price', 'description', 'images', 'status'],
+      'fields': [
+        'name',
+        'location',
+        'price',
+        'description',
+        'images',
+        'status'
+      ],
       'color': Colors.blueAccent,
     },
     {
@@ -18,7 +27,13 @@ class ManageDatabase extends StatelessWidget {
     {
       'title': 'Room Booking',
       'collection': 'room_booking',
-      'fields': ['start_date', 'end_date', 'transaction_id', 'user_email', 'room_id'],
+      'fields': [
+        'start_date',
+        'end_date',
+        'transaction_id',
+        'user_email',
+        'room_id'
+      ],
       'color': Colors.green,
     },
     {
@@ -34,6 +49,19 @@ class ManageDatabase extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Manage Database'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () {
+              // Add your logout functionality here
+              // For example, FirebaseAuth.instance.signOut();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -53,7 +81,9 @@ class ManageDatabase extends StatelessWidget {
                         title: section['title'],
                         collection: section['collection'],
                         fields: section['fields'],
-                        defaultValues: section['collection'] == 'rooms' ? {'status': false} : null,
+                        defaultValues: section['collection'] == 'rooms'
+                            ? {'status': false}
+                            : null,
                       ),
                     ),
                   );

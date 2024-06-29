@@ -199,9 +199,12 @@ class _DetailsRoomPageState extends State<DetailsRoomPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Location: ${roomData!['location']}',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        Flexible(
+                          child: Text(
+                            'Location: ${roomData!['location']}',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         Text(
                           'BDT ${roomData!['price'].toStringAsFixed(2)}',
@@ -290,8 +293,7 @@ class _DetailsRoomPageState extends State<DetailsRoomPage> {
                           child: Row(
                             children: <Widget>[
                               _buildOfferIcon(Icons.bed, 'Twin Bed'),
-                              _buildOfferIcon(
-                                  Icons.local_parking, 'Parking'),
+                              _buildOfferIcon(Icons.local_parking, 'Parking'),
                               _buildOfferIcon(Icons.wifi, 'WiFi'),
                               _buildOfferIcon(Icons.pool, 'Pool'),
                               _buildOfferIcon(Icons.fastfood, 'Snack'),
@@ -330,62 +332,68 @@ class _DetailsRoomPageState extends State<DetailsRoomPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            ElevatedButton.icon(
-              onPressed: () {
-                _makePhoneCall('tel:+8801623094662');
-              },
-              icon: Icon(Icons.call),
-              label: Text('Call Now'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  _makePhoneCall('tel:+8801623094662');
+                },
+                icon: Icon(Icons.call),
+                label: Text('Call Now'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                ),
               ),
             ),
             isInCart
-                ? ElevatedButton(
-                    onPressed: null,
-                    child: Text('Already in Cart'),
-                    style: ElevatedButton.styleFrom(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                ? Expanded(
+                    child: ElevatedButton(
+                      onPressed: null,
+                      child: Text('Already in Cart'),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
                     ),
                   )
-                : ElevatedButton.icon(
-                    onPressed: roomData == null
-                        ? null
-                        : () {
-                            _addToCart();
-                          },
-                    icon: Icon(Icons.shopping_cart),
-                    label: Text('Add to Cart'),
-                    style: ElevatedButton.styleFrom(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                : Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: roomData == null
+                          ? null
+                          : () {
+                              _addToCart();
+                            },
+                      icon: Icon(Icons.shopping_cart),
+                      label: Text('Add to Cart'),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
                     ),
                   ),
             roomData == null || roomData!['status'] == true
-                ? ElevatedButton(
-                    onPressed: null,
-                    child: Text('Already Booked'),
-                    style: ElevatedButton.styleFrom(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                ? Expanded(
+                    child: ElevatedButton(
+                      onPressed: null,
+                      child: Text('Already Booked'),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
                     ),
                   )
-                : ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              BookingPage(roomId: widget.roomId),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.book),
-                    label: Text('Book Now'),
-                    style: ElevatedButton.styleFrom(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                : Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                BookingPage(roomId: widget.roomId),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.book),
+                      label: Text('Book Now'),
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
                     ),
                   ),
           ],
@@ -427,7 +435,8 @@ void main() {
     debugShowCheckedModeBanner: false,
     home: DetailsRoomPage(
       roomId: 'abc123', // Replace with actual room ID from your Firestore
-      collectionName: 'rooms', // Replace with actual collection name from your Firestore
+      collectionName:
+          'rooms', // Replace with actual collection name from your Firestore
     ),
   ));
 }

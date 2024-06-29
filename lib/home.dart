@@ -123,7 +123,9 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.logout),
+              leading: Icon(Icons.logout, color: Colors.white
+              
+              ),
               title: Text('Logout'),
               onTap: _handleLogout,
             ),
